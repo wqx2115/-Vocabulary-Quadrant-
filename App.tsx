@@ -84,16 +84,20 @@ const App: React.FC = () => {
         }
     }, [savedWords]);
 
-    const handleSearch = useCallback(async () => {
-        if (!wordToSearch.trim()) return;
+    const executeSearch = useCallback(async (wordToQuery: string) => {
+        if (!wordToQuery.trim()) return;
+        
         setIsLoading(true);
         setError(null);
         setWordDetails(null);
-        setCurrentWord(wordToSearch.trim().toLowerCase());
-        setSimilarWords([]);
+        window.scrollTo(0, 0);
+
+        const lowercasedWord = wordToQuery.trim().toLowerCase();
+        setCurrentWord(lowercasedWord);
+        setSimilarWords([]); // Reset user-added similar words for the new search
         
         try {
-            const details = await fetchWordDetails(wordToSearch.trim().toLowerCase());
+            const details = await fetchWordDetails(lowercasedWord);
             setWordDetails(details);
         } catch (err) {
             setError(err instanceof Error ? err.message : 'An unknown error occurred.');
@@ -101,11 +105,16 @@ const App: React.FC = () => {
         } finally {
             setIsLoading(false);
         }
-    }, [wordToSearch]);
+    }, []);
 
     const handleFormSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        handleSearch();
+        executeSearch(wordToSearch);
+    };
+
+    const handleDoubleClickWord = (word: string) => {
+        setWordToSearch(word);
+        executeSearch(word);
     };
 
     const handleAddSimilarWord = (e: React.FormEvent) => {
@@ -144,6 +153,7 @@ const App: React.FC = () => {
 
 
     const iconClasses = "h-6 w-6 text-indigo-500 dark:text-indigo-400";
+    const searchableWordClass = "font-semibold text-indigo-600 dark:text-indigo-400 cursor-pointer hover:underline transition";
     const isWordSaved = currentWord ? savedWords.some(sw => sw.word === currentWord) : false;
 
     return (
@@ -250,7 +260,8 @@ const App: React.FC = () => {
                                             {wordDetails.forms.map((form, i) => (
                                                  <div key={i} className="p-3 bg-slate-100/50 dark:bg-slate-700/50 rounded-lg border border-slate-200 dark:border-slate-600/50">
                                                     <p className="font-semibold text-slate-800 dark:text-slate-100">
-                                                        {form.word} <span className="ml-2 font-normal text-sm italic text-slate-500 dark:text-slate-400">({form.pos})</span>
+                                                        <span onDoubleClick={() => handleDoubleClickWord(form.word)} className={searchableWordClass}>{form.word}</span>
+                                                        <span className="ml-2 font-normal text-sm italic text-slate-500 dark:text-slate-400">({form.pos})</span>
                                                     </p>
                                                     <p className="text-sm text-slate-600 dark:text-slate-300 mt-1">{form.definition}</p>
                                                     <div className="mt-2 pl-3 border-l-2 border-indigo-300 dark:border-indigo-600 text-slate-600 dark:text-slate-300 text-sm">
@@ -287,7 +298,7 @@ const App: React.FC = () => {
                                             {wordDetails.etymology.relatedWords.map((related, i) => (
                                                 <li key={i} className="p-3 bg-slate-100/50 dark:bg-slate-700/50 rounded-lg border border-slate-200 dark:border-slate-600/50">
                                                     <p className="font-semibold text-slate-800 dark:text-slate-100">
-                                                        {related.word}
+                                                        <span onDoubleClick={() => handleDoubleClickWord(related.word)} className={searchableWordClass}>{related.word}</span>
                                                         <span className="ml-2 font-normal text-slate-500 dark:text-slate-400">({related.translation})</span>
                                                     </p>
                                                     <p className="text-sm text-indigo-600 dark:text-indigo-400 mt-1 font-mono bg-indigo-50 dark:bg-indigo-900/30 p-1 rounded">
@@ -306,7 +317,9 @@ const App: React.FC = () => {
                                 <div className="space-y-4">
                                     {wordDetails.synonyms.map((syn, i) => (
                                         <div key={i} className="p-3 bg-slate-100/50 dark:bg-slate-700/50 rounded-lg border border-slate-200 dark:border-slate-600/50">
-                                            <p className="font-semibold text-lg text-slate-800 dark:text-slate-100">{syn.word}</p>
+                                            <p className="font-semibold text-lg text-slate-800 dark:text-slate-100">
+                                               <span onDoubleClick={() => handleDoubleClickWord(syn.word)} className={searchableWordClass}>{syn.word}</span>
+                                            </p>
                                             <p className="mt-1 text-slate-600 dark:text-slate-300">{syn.usageDifference}</p>
                                             <div className="mt-2 pl-3 border-l-2 border-indigo-300 dark:border-indigo-600 text-slate-600 dark:text-slate-300">
                                                 <p className="text-sm font-medium">{syn.example}</p>
@@ -329,20 +342,40 @@ const App: React.FC = () => {
                                             type="text"
                                             value={newSimilarWord}
                                             onChange={(e) => setNewSimilarWord(e.target.value)}
-                                            placeholder="Add a word..."
+                                            placeholder="Add your own..."
                                             className="flex-grow bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-md px-3 py-1.5 focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 outline-none transition duration-300"
                                         />
                                         <button type="submit" className="bg-indigo-500 hover:bg-indigo-600 text-white p-2 rounded-md disabled:bg-slate-400 dark:disabled:bg-slate-600" disabled={!newSimilarWord.trim()}>
                                             <PlusIcon className="h-5 w-5" />
                                         </button>
                                     </form>
-                                    <div className="flex flex-wrap gap-2">
-                                        {similarWords.map((word, i) => (
-                                            <span key={i} className="bg-amber-100 dark:bg-amber-900/50 text-amber-800 dark:text-amber-300 px-3 py-1 rounded-full text-sm font-medium">{word}</span>
-                                        ))}
-                                         {similarWords.length === 0 && (
-                                            <p className="text-slate-500 dark:text-slate-400 text-sm">Add words that you find visually similar to help with recall.</p>
-                                        )}
+
+                                    {wordDetails.confusableWords?.length > 0 && (
+                                        <div className="mb-4">
+                                            <h4 className="text-sm font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Commonly Confused</h4>
+                                            <div className="space-y-3">
+                                                {wordDetails.confusableWords.map((item, i) => (
+                                                    <div key={`confuse-${i}`} className="p-2 rounded-lg transition hover:bg-slate-100 dark:hover:bg-slate-700/50" onDoubleClick={() => handleDoubleClickWord(item.word)}>
+                                                        <p className="font-semibold text-slate-800 dark:text-slate-100 cursor-pointer">
+                                                           <span className={searchableWordClass}>{item.word}</span> <span className="ml-2 font-normal text-sm italic text-slate-500 dark:text-slate-400">({item.pos})</span>
+                                                        </p>
+                                                        <p className="text-sm text-slate-600 dark:text-slate-300">{item.definition}</p>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                    
+                                    <div>
+                                        <h4 className="text-sm font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">My List</h4>
+                                        <div className="flex flex-wrap gap-2">
+                                            {similarWords.map((word, i) => (
+                                                <span key={`user-${i}`} onDoubleClick={() => handleDoubleClickWord(word)} className="bg-amber-100 dark:bg-amber-900/50 text-amber-800 dark:text-amber-300 px-3 py-1 rounded-full text-sm font-medium cursor-pointer hover:bg-amber-200 dark:hover:bg-amber-800/60 transition">{word}</span>
+                                            ))}
+                                            {similarWords.length === 0 && (
+                                                <p className="text-slate-500 dark:text-slate-400 text-sm">Add words that you find visually similar to help with recall.</p>
+                                            )}
+                                        </div>
                                     </div>
                                 </>
                              )}

@@ -33,6 +33,12 @@ export interface Synonym {
   exampleTranslation: string;
 }
 
+export interface ConfusableWord {
+  word: string;
+  pos: string;
+  definition: string;
+}
+
 export interface WordDetails {
   pos: string;
   syllabification: string;
@@ -43,6 +49,7 @@ export interface WordDetails {
   forms: WordForm[];
   etymology: Etymology;
   synonyms: Synonym[];
+  confusableWords: ConfusableWord[];
 }
 
 export interface SavedWord {

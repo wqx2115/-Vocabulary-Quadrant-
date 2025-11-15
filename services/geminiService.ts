@@ -92,12 +92,25 @@ const schema = {
         required: ["word", "usageDifference", "example", "exampleTranslation"],
       },
     },
+    confusableWords: {
+      type: Type.ARRAY,
+      description: "A list of visually or phonetically similar English words that are commonly confused with the primary word. For each, provide its primary part of speech and a concise Chinese definition.",
+      items: {
+        type: Type.OBJECT,
+        properties: {
+            word: { type: Type.STRING, description: "The confusable word." },
+            pos: { type: Type.STRING, description: "The primary part of speech of the confusable word." },
+            definition: { type: Type.STRING, description: "A concise Chinese definition of the confusable word." },
+        },
+        required: ["word", "pos", "definition"],
+      },
+    },
   },
-  required: ["pos", "syllabification", "pronunciation", "commonMeaning", "etymologicalMeaning", "examples", "forms", "etymology", "synonyms"],
+  required: ["pos", "syllabification", "pronunciation", "commonMeaning", "etymologicalMeaning", "examples", "forms", "etymology", "synonyms", "confusableWords"],
 };
 
 export const fetchWordDetails = async (word: string): Promise<WordDetails> => {
-  const prompt = `Analyze the English word "${word}". Provide a detailed linguistic breakdown in a structured JSON format. I need: its primary part of speech; syllabification; IPA pronunciation; a common, easy-to-understand Chinese meaning; an etymological meaning in Chinese that explains how the prefixes, root, and suffixes combine to form the meaning; at least three example sentences with Chinese translations for the primary form; other word forms (noun, adjective, etc.). For each form, provide its definition in Chinese, an example sentence, and its Chinese translation; detailed etymology including the primary root's language of origin, its meaning in Chinese, a brief history in Chinese of the root's development and how it entered English, and a list of related English words. For each related word, provide its Chinese translation and a morphological breakdown. Also include a list of synonyms. For each synonym, provide a clear explanation in Chinese about its usage difference compared to "${word}", and an example sentence (with its Chinese translation) that highlights this difference. If the word is invalid, return a JSON object with an 'error' key.`;
+  const prompt = `Analyze the English word "${word}". Provide a detailed linguistic breakdown in a structured JSON format. I need: its primary part of speech; syllabification; IPA pronunciation; a common, easy-to-understand Chinese meaning; an etymological meaning in Chinese that explains how the prefixes, root, and suffixes combine to form the meaning; at least three example sentences with Chinese translations for the primary form; other word forms (noun, adjective, etc.). For each form, provide its definition in Chinese, an example sentence, and its Chinese translation; detailed etymology including the primary root's language of origin, its meaning in Chinese, a brief history in Chinese of the root's development and how it entered English, and a list of related English words. For each related word, provide its Chinese translation and a morphological breakdown. Also include a list of synonyms. For each synonym, provide a clear explanation in Chinese about its usage difference compared to "${word}", and an example sentence (with its Chinese translation) that highlights this difference. Finally, provide a list of visually or phonetically similar English words that are commonly confused with "${word}". For each of these 'confusable' words, give its primary part of speech and a concise Chinese definition. If the word is invalid, return a JSON object with an 'error' key.`;
 
   try {
     const response = await ai.models.generateContent({
